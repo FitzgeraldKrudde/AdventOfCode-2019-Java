@@ -21,6 +21,7 @@ class Intcode {
     private int verb;
 
     public void run() {
+        program=program.clone();
         program[1] = noun;
         program[2] = verb;
 
@@ -58,7 +59,7 @@ public class Day_02 {
                 .mapToInt(Integer::valueOf)
                 .toArray();
 
-        Intcode intcode = new Intcode(intCodeProgram.clone(), 12, 2);
+        Intcode intcode = new Intcode(intCodeProgram, 12, 2);
         intcode.run();
         System.out.println("intCodeProgram[0] = " + intcode.getPosition0());
 
@@ -72,7 +73,7 @@ public class Day_02 {
         int result = 19690720;
         for (int noun = 0; noun <= 99; noun++) {
             for (int verb = 0; verb <= 99; verb++) {
-                intcode = new Intcode(intCodeProgram.clone(), noun, verb);
+                intcode = new Intcode(intCodeProgram, noun, verb);
                 intcode.run();
                 if (intcode.getPosition0() == result) {
                     System.out.println("intCodeProgram[0] = " + intcode.getPosition0());
