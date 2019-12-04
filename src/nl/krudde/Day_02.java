@@ -1,5 +1,8 @@
 package nl.krudde;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,10 +13,39 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
+@Data
+@AllArgsConstructor
+class Intcode {
+    private int[] program;
+    private int noun;
+    private int verb;
+
+    public void run() {
+        program[1] = noun;
+        program[2] = verb;
+
+        int position = 0;
+        while (program[position] != 99) {
+            program[program[position + 3]] =
+                    switch (program[position]) {
+                        case 1 -> program[program[position + 1]] + program[program[position + 2]];
+                        case 2 -> program[program[position + 1]] * program[program[position + 2]];
+                        default -> throw new IllegalStateException("unknown opcode: " + program[position]);
+                    };
+            position += 4;
+        }
+    }
+
+    public int getPosition0() {
+        return program[0];
+    }
+}
+
 public class Day_02 {
 
     final static String DEFAULT_FILENAME = new Object() {
     }.getClass().getEnclosingClass().getSimpleName().toLowerCase().replace("_0", "_") + ".txt";
+
 
     public static void main(String[] args) throws IOException {
         LocalTime start = LocalTime.now();
@@ -25,21 +57,10 @@ public class Day_02 {
         int[] intCodeProgram = Arrays.stream(input.split(","))
                 .mapToInt(Integer::valueOf)
                 .toArray();
-        intCodeProgram[1] = 12;
-        intCodeProgram[2] = 2;
 
-        int position = 0;
-        while (intCodeProgram[position] != 99) {
-            intCodeProgram[intCodeProgram[position + 3]] =
-                    switch (intCodeProgram[position]) {
-                        case 1 -> intCodeProgram[intCodeProgram[position + 1]] + intCodeProgram[intCodeProgram[position + 2]];
-                        case 2 -> intCodeProgram[intCodeProgram[position + 1]] * intCodeProgram[intCodeProgram[position + 2]];
-                        default -> throw new IllegalStateException("unknown opcode: " + intCodeProgram[position]);
-                    };
-            position += 4;
-        }
-
-        System.out.println("intCodeProgram[0] = " + intCodeProgram[0]);
+        Intcode intcode = new Intcode(intCodeProgram.clone(), 12, 2);
+        intcode.run();
+        System.out.println("intCodeProgram[0] = " + intcode.getPosition0());
 
         LocalTime finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
@@ -51,25 +72,10 @@ public class Day_02 {
         int result = 19690720;
         for (int noun = 0; noun <= 99; noun++) {
             for (int verb = 0; verb <= 99; verb++) {
-                intCodeProgram = Arrays.stream(input.split(","))
-                        .mapToInt(Integer::valueOf)
-                        .toArray();
-                intCodeProgram[1] = noun;
-                intCodeProgram[2] = verb;
-
-                position = 0;
-                while (intCodeProgram[position] != 99) {
-                    intCodeProgram[intCodeProgram[position + 3]] =
-                            switch (intCodeProgram[position]) {
-                                case 1 -> intCodeProgram[intCodeProgram[position + 1]] + intCodeProgram[intCodeProgram[position + 2]];
-                                case 2 -> intCodeProgram[intCodeProgram[position + 1]] * intCodeProgram[intCodeProgram[position + 2]];
-                                default -> throw new IllegalStateException("unknown opcode: " + intCodeProgram[position]);
-                            };
-                    position += 4;
-                }
-
-                if (intCodeProgram[0] == result) {
-                    System.out.println("intCodeProgram[0] = " + intCodeProgram[0]);
+                intcode = new Intcode(intCodeProgram.clone(), noun, verb);
+                intcode.run();
+                if (intcode.getPosition0() == result) {
+                    System.out.println("intCodeProgram[0] = " + intcode.getPosition0());
                     System.out.println("noun = " + noun);
                     System.out.println("verb = " + verb);
                     System.out.println("100 * noun + verb = " + (100 * noun + verb));
