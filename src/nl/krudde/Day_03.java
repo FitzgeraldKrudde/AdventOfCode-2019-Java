@@ -32,12 +32,13 @@ public class Day_03 {
         Wire wire1 = buildWire(input.get(0));
         Wire wire2 = buildWire(input.get(1));
 
-        List<Point> intersections =
-                wire1.getPathList().parallelStream()
-                        .flatMap(path1 ->
-                                wire2.getPathList().stream()
-                                        .flatMap(path2 -> getIntersections(path1, path2).stream())
-                        )
+        List<Point> intersections=
+                Stream.concat(wire1.getAllPoints().stream().distinct(), wire2.getAllPoints().stream().distinct())
+                        .collect(groupingBy(Function.identity(), counting()))
+                        .entrySet()
+                        .stream()
+                        .filter(p -> p.getValue() > 1)
+                        .map(Map.Entry::getKey)
                         .collect(toList());
 
         Point closestIntersection =
@@ -56,9 +57,9 @@ public class Day_03 {
 
         System.out.println("\npart 2: ");
         int shortestSumWireDistanceToIntersection = intersections.stream()
-                .map(intersection -> calculateSumWireDistance(intersection, wire1, wire2))
-                .min(comparingInt(i -> i))
-                .get();
+                .mapToInt(intersection -> calculateSumWireDistance(intersection, wire1, wire2))
+                .min()
+                .getAsInt();
         System.out.println("shortestSumWireDistanceToIntersection = " + shortestSumWireDistanceToIntersection);
 
         finish = LocalTime.now();
