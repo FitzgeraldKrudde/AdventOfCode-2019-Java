@@ -182,11 +182,10 @@ public class Day_03 {
 
         @Override
         public int compareTo(Point o) {
-            Point other = o;
-            if (this.y == other.y) {
-                return x - other.x;
+            if (this.y == o.y) {
+                return x - o.x;
             } else {
-                return y - other.y;
+                return y - o.y;
             }
         }
 
