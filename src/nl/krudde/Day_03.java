@@ -6,7 +6,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -32,7 +35,7 @@ public class Day_03 {
         Wire wire1 = buildWire(input.get(0));
         Wire wire2 = buildWire(input.get(1));
 
-        List<Point> intersections=
+        List<Point> intersections =
                 Stream.concat(wire1.getAllPoints().stream().distinct(), wire2.getAllPoints().stream().distinct())
                         .collect(groupingBy(Function.identity(), counting()))
                         .entrySet()
@@ -56,7 +59,7 @@ public class Day_03 {
         start = LocalTime.now();
 
         System.out.println("\npart 2: ");
-        int shortestSumWireDistanceToIntersection = intersections.stream()
+        int shortestSumWireDistanceToIntersection = intersections.parallelStream()
                 .mapToInt(intersection -> calculateSumWireDistance(intersection, wire1, wire2))
                 .min()
                 .getAsInt();
@@ -67,27 +70,7 @@ public class Day_03 {
     }
 
     private static int calculateSumWireDistance(Point intersection, Wire wire1, Wire wire2) {
-        int distance = 0;
-        Iterator<Point> points = wire1.getAllPoints().iterator();
-        while (points.hasNext() && !points.next().equals(intersection)) {
-            distance++;
-        }
-        points = wire2.getAllPoints().iterator();
-        while (points.hasNext() && !points.next().equals(intersection)) {
-            distance++;
-        }
-        // add both intersections
-        return distance + 2;
-    }
-
-    private static List<Point> getIntersections(Path path1, Path path2) {
-        return Stream.concat(path1.getPoints().stream(), path2.getPoints().stream())
-                .collect(groupingBy(Function.identity(), counting()))
-                .entrySet()
-                .stream()
-                .filter(p -> p.getValue() > 1)
-                .map(Map.Entry::getKey)
-                .collect(toList());
+        return wire1.getAllPoints().indexOf(intersection) + wire2.getAllPoints().indexOf(intersection) + 2;
     }
 
     private static Wire buildWire(String s) {
@@ -118,6 +101,13 @@ public class Day_03 {
         System.out.println(String.format("read file: %s (#lines: %d)", fileName, input.size()));
 
         return input;
+    }
+
+    enum Direction {
+        R,
+        L,
+        U,
+        D
     }
 
     static class Wire {
@@ -197,12 +187,5 @@ public class Day_03 {
                 case L -> new Point(getX() - distance, getY());
             };
         }
-    }
-
-    enum Direction {
-        R,
-        L,
-        U,
-        D
     }
 }
