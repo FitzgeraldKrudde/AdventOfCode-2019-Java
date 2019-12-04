@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 
@@ -24,12 +25,10 @@ public class Day_04 {
         int lowestNr = Integer.parseInt(input.get(0).split("-")[0]);
         int highestNr = Integer.parseInt(input.get(0).split("-")[1]);
 
-        long count = 0;
-        for (int i = lowestNr; i <= highestNr; i++) {
-            if (twoAdjacentDigitsEqual(i) && digitsDoNotDecrease(i)) {
-                count++;
-            }
-        }
+        long count = IntStream.rangeClosed(lowestNr, highestNr)
+                .filter(Day_04::twoAdjacentDigitsEqual)
+                .filter(Day_04::digitsDoNotDecrease)
+                .count();
         System.out.println("count = " + count);
 
         LocalTime finish = LocalTime.now();
@@ -39,12 +38,10 @@ public class Day_04 {
         start = LocalTime.now();
         System.out.println("\npart 2: ");
 
-        count = 0;
-        for (int i = lowestNr; i <= highestNr; i++) {
-            if (strictlyTwoAdjacentDigitsEqual(i) && digitsDoNotDecrease(i)) {
-                count++;
-            }
-        }
+        count = IntStream.rangeClosed(lowestNr, highestNr)
+                .filter(Day_04::strictlyTwoAdjacentDigitsEqual)
+                .filter(Day_04::digitsDoNotDecrease)
+                .count();
         System.out.println("count = " + count);
         finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
