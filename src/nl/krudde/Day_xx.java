@@ -15,11 +15,10 @@ public class Day_xx {
     }.getClass().getEnclosingClass().getSimpleName().toLowerCase().replace("_0", "_") + ".txt";
 
     public static void main(String[] args) throws IOException {
-        LocalTime start = LocalTime.now();
-
         List<String> input = readFile(args);
 
         // part 1
+        LocalTime start = LocalTime.now();
         System.out.println("\npart 1: ");
 
         LocalTime finish = LocalTime.now();
@@ -27,7 +26,6 @@ public class Day_xx {
 
         // part 2
         start = LocalTime.now();
-
         System.out.println("\npart 2: ");
 
         finish = LocalTime.now();
