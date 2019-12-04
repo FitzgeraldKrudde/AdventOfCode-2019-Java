@@ -47,7 +47,7 @@ public class Day_03 {
         Point closestIntersection =
                 intersections.stream()
                         .min(comparingInt(p -> calculateManhattanDistance(startPoint, p)))
-                        .get();
+                        .orElseThrow(() -> new IllegalStateException("no intersection found"));
 
         int closestIntersectionDistance = calculateManhattanDistance(startPoint, closestIntersection);
         System.out.println("closestIntersectionDistance = " + closestIntersectionDistance);
@@ -62,7 +62,7 @@ public class Day_03 {
         int shortestSumWireDistanceToIntersection = intersections.parallelStream()
                 .mapToInt(intersection -> calculateSumWireDistance(intersection, wire1, wire2))
                 .min()
-                .getAsInt();
+                .orElseThrow(() -> new IllegalStateException("no values"));
         System.out.println("shortestSumWireDistanceToIntersection = " + shortestSumWireDistanceToIntersection);
 
         finish = LocalTime.now();
