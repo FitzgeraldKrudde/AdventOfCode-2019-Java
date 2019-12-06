@@ -27,6 +27,7 @@ class IntcodeV2 {
         int position = 0;
         int opcode;
         int firstParameter, secondParameter;
+        long counter = 0;
         while (program[position] != 99) {
             opcode = getOpcode(position);
             switch (opcode) {
@@ -85,7 +86,9 @@ class IntcodeV2 {
                 }
                 default -> throw new IllegalStateException("unknown opcode: " + opcode);
             }
+            counter++;
         }
+        System.out.println("counter = " + counter);
     }
 
     private int getOpcode(int position) {
