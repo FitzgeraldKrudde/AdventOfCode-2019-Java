@@ -21,12 +21,16 @@ public class Day_xx {
         LocalTime start = LocalTime.now();
         System.out.println("\npart 1: ");
 
+
+
         LocalTime finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
 
         // part 2
         start = LocalTime.now();
         System.out.println("\npart 2: ");
+
+
 
         finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
