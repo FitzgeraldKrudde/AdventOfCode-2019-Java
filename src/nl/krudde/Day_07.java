@@ -148,6 +148,7 @@ public class Day_07 {
                 .toArray();
 
         long maxThrusterSignal = IntStream.rangeClosed(0, 44444)
+                .parallel()
                 .filter(Day_07::hasOnlyDistinctDigits)
                 .filter(Day_07::containsOnlyDigitsLowerThan5)
                 .mapToLong(i -> determineThrusterSignal(intCodeProgram, calculatePhaseAmplifiers(i)))
@@ -164,6 +165,7 @@ public class Day_07 {
         System.out.println("\npart 2: ");
 
         maxThrusterSignal = IntStream.rangeClosed(55555, 99999)
+                .parallel()
                 .filter(Day_07::hasOnlyDistinctDigits)
                 .filter(Day_07::containsOnlyDigitsGreaterOrEqualThan5)
                 .mapToLong(i -> determineThrusterSignalWithFeedback(intCodeProgram, calculatePhaseAmplifiers(i)))
