@@ -21,6 +21,7 @@ public class Day_06 {
     }.getClass().getEnclosingClass().getSimpleName().toLowerCase().replace("_0", "_") + ".txt";
 
     static Map<String, String> mapOrbits = new HashMap<>();
+    static Map<String, Integer> countOrbits = new HashMap<>();
 
     public static void main(String[] args) throws IOException {
         List<String> input = readFile(args);
@@ -70,10 +71,16 @@ public class Day_06 {
     }
 
     private static int countOrbits(String orbit, int depth) {
+        if (countOrbits.containsKey(orbit)) {
+            return depth + countOrbits.get(orbit);
+        }
+
         if (!mapOrbits.containsKey(orbit)) {
             return depth;
         } else {
-            return countOrbits(mapOrbits.get(orbit), depth + 1);
+            int count = countOrbits(mapOrbits.get(orbit), depth + 1);
+            countOrbits.put(orbit, count - depth);
+            return count;
         }
     }
 
