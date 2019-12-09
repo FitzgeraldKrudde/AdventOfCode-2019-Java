@@ -2,8 +2,6 @@ package nl.krudde;
 
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,8 +9,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Queue;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -24,25 +23,29 @@ class IntcodeV3 {
     final private int MODE_IMMEDIATE = 1;
 
     private int[] program;
-    int position;
+    private int position;
 
-    private int amplifierPhase;
-    @Setter
-    private int input;
-    @Getter
-    private int amplifierOutputSignal;
     @Builder.Default
-    private boolean firstInput = true;
+    private Queue<Integer> input = new LinkedList<>();
+    @Builder.Default
+    private Queue<Integer> output = new LinkedList<>();
     @Builder.Default
     private boolean halted = false;
     @Builder.Default
     private boolean initialised = false;
 
+    public void addInput(Integer input) {
+        this.input.add(input);
+    }
+
+    public int getOutput() {
+        return output.remove();
+    }
+
     public void run() {
         int opcode;
         int firstParameter, secondParameter;
         boolean waitingForInput = false;
-        Optional<Integer> input = Optional.of(this.input);
 
         if (!initialised) {
             program = program.clone();
@@ -65,21 +68,16 @@ class IntcodeV3 {
                     position += 4;
                 }
                 case 3 -> {
-                    if (firstInput) {
-                        program[program[position + 1]] = amplifierPhase;
-                        firstInput = false;
-                    } else if (input.isPresent()) {
-                        program[program[position + 1]] = input.get();
-                        input = Optional.empty();
-                    } else {
+                    if (input.peek() == null) {
                         waitingForInput = true;
-                        break;
+                    } else {
+                        program[program[position + 1]] = input.remove();
+                        position += 2;
                     }
-                    position += 2;
                 }
                 case 4 -> {
                     firstParameter = getParameter(position, 1);
-                    amplifierOutputSignal = firstParameter;
+                    output.add(firstParameter);
                     position += 2;
                 }
                 case 5 -> {
@@ -191,11 +189,11 @@ public class Day_07 {
         for (int amplifier = 0; amplifier < NR_AMPLIFIERS; amplifier++) {
             IntcodeV3 intcode = new IntcodeV3.IntcodeV3Builder()
                     .program(program)
-                    .amplifierPhase(amplifierPhases[amplifier])
-                    .input(amplifierOutputSignal)
                     .build();
+            intcode.addInput(amplifierPhases[amplifier]);
+            intcode.addInput(amplifierOutputSignal);
             intcode.run();
-            amplifierOutputSignal = intcode.getAmplifierOutputSignal();
+            amplifierOutputSignal = intcode.getOutput();
         }
         return amplifierOutputSignal;
     }
@@ -208,16 +206,16 @@ public class Day_07 {
         for (int amplifier = 0; amplifier < NR_AMPLIFIERS; amplifier++) {
             amplifierPrograms[amplifier] = new IntcodeV3.IntcodeV3Builder()
                     .program(program)
-                    .amplifierPhase(amplifierPhases[amplifier])
                     .build();
+            amplifierPrograms[amplifier].addInput(amplifierPhases[amplifier]);
         }
 
         // run until the last program has halted
         while (!amplifierPrograms[NR_AMPLIFIERS - 1].isHalted()) {
             for (int j = 0; j < NR_AMPLIFIERS; j++) {
-                amplifierPrograms[j].setInput(amplifierOutputSignal);
+                amplifierPrograms[j].addInput(amplifierOutputSignal);
                 amplifierPrograms[j].run();
-                amplifierOutputSignal = amplifierPrograms[j].getAmplifierOutputSignal();
+                amplifierOutputSignal = amplifierPrograms[j].getOutput();
             }
         }
         return amplifierOutputSignal;
