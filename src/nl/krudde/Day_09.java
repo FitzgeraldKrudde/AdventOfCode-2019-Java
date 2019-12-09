@@ -9,8 +9,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Stack;
+import java.util.Queue;
 
 import static java.util.stream.Collectors.toList;
 
@@ -22,18 +23,24 @@ class IntcodeV4 {
     final private int MODE_RELATIVE = 2;
 
     private double[] program;
-    int position;
-    int relativeBase = 0;
+    private int position;
+    private int relativeBase = 0;
 
     @Builder.Default
     private boolean halted = false;
     @Builder.Default
-    Stack<Integer> input = new Stack<>();
+    private Queue<Integer> input = new LinkedList<>();
+    @Builder.Default
+    private Queue<Integer> output = new LinkedList<>();
     @Builder.Default
     private boolean initialised = false;
 
     public void addInput(Integer input) {
-        this.input.push(input);
+        this.input.add(input);
+    }
+
+    public int getOutput() {
+        return output.remove();
     }
 
     public void run() {
@@ -68,11 +75,11 @@ class IntcodeV4 {
                     position += 4;
                 }
                 case 3 -> {
-                    if (input.empty()) {
+                    if (input.peek() == null) {
                         throw new IllegalStateException("input empty");
                     }
                     int writePosition = getPosition(position, 1);
-                    program[writePosition] = input.pop();
+                    program[writePosition] = input.remove();
                     position += 2;
                 }
                 case 4 -> {
