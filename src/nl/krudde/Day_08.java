@@ -1,14 +1,88 @@
 package nl.krudde;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import static java.util.Comparator.comparingLong;
 import static java.util.stream.Collectors.toList;
+
+@Data
+class Image {
+    int TRANSPARENT = 2;
+
+    private final List<Layer> layers = new ArrayList<>();
+
+    static Image of(String pixels, int pixelsPerLayer) {
+        Image image = new Image();
+        int nrLayers = pixels.length() / pixelsPerLayer;
+        IntStream.range(0, nrLayers)
+                .forEach(i -> {
+                    Layer layer = new Layer();
+                    pixels.substring(i * pixelsPerLayer, (i + 1) * pixelsPerLayer)
+                            .chars()
+                            .map(Character::getNumericValue)
+                            .forEach(pixel -> layer.getPixels().add(pixel));
+                    image.getLayers().add(layer);
+                });
+        return image;
+    }
+
+    Layer getLayerWithLowestNumberOfZeros() {
+        return layers.parallelStream()
+                .min(comparingLong(Layer::numberOfZeros))
+                .orElseThrow(() -> new IllegalStateException("no value"));
+    }
+
+    Image decodeImage() {
+        Image newImage = new Image();
+        Layer newLayer = new Layer();
+
+        newLayer.getPixels().addAll(
+                IntStream.range(0, layers.get(0).getPixels().size())
+                        .mapToObj(position -> layers.stream()
+                                .map(layer -> layer.getPixels().get(position))
+                                .filter(pixel -> pixel != TRANSPARENT)
+                                .findFirst()
+                                .orElseThrow(() -> new IllegalStateException("no value"))
+                        )
+                        .collect(toList()));
+        newImage.getLayers().add(newLayer);
+        return newImage;
+    }
+}
+
+@Data
+@AllArgsConstructor
+class Layer {
+    private final List<Integer> pixels = new ArrayList<>();
+
+    long numberOfZeros() {
+        return nrDigits(0);
+    }
+
+    long numberOfOnes() {
+        return nrDigits(1);
+    }
+
+    long numberOfTwos() {
+        return nrDigits(2);
+    }
+
+    private long nrDigits(int digit) {
+        return pixels.stream()
+                .filter(pixel -> pixel == digit)
+                .count();
+    }
+}
 
 public class Day_08 {
 
@@ -22,33 +96,13 @@ public class Day_08 {
         LocalTime start = LocalTime.now();
         System.out.println("\npart 1: ");
 
-        int wide = 25;
-        int tall = 6;
-        int[][] encodedImage;
+        int WIDE = 25;
+        int TALL = 6;
 
-        int nrDigitsInInput = input.get(0).length();
-        int nrLayers = nrDigitsInInput / (wide * tall);
-        encodedImage = new int[nrLayers][wide * tall];
-        IntStream.range(0, nrDigitsInInput)
-                .forEach(i -> {
-                    int layer = i / 150;
-                    int position = i % 150;
-                    encodedImage[layer][position] = Character.getNumericValue(input.get(0).charAt(i));
-                });
+        Image encodedImage = Image.of(input.get(0), WIDE * TALL);
+        Layer layerWithLowestNumberOfZeros = encodedImage.getLayerWithLowestNumberOfZeros();
 
-
-        int fewest0Digits = Integer.MAX_VALUE;
-        long multiplyNrOnesAndNrTwosForLayer = 0;
-        for (int[] layer : encodedImage) {
-            int[] counters = new int[3];
-            for (int i : layer) {
-                counters[i]++;
-            }
-            if (counters[0] < fewest0Digits) {
-                multiplyNrOnesAndNrTwosForLayer = counters[1] * counters[2];
-                fewest0Digits = counters[0];
-            }
-        }
+        long multiplyNrOnesAndNrTwosForLayer = layerWithLowestNumberOfZeros.numberOfOnes() * layerWithLowestNumberOfZeros.numberOfTwos();
         System.out.println("multiplyNrOnesAndNrTwosForLayer = " + multiplyNrOnesAndNrTwosForLayer);
 
         LocalTime finish = LocalTime.now();
@@ -58,24 +112,14 @@ public class Day_08 {
         start = LocalTime.now();
         System.out.println("\npart 2: ");
 
-        // per pixel: find the first non-transparent pixel in the layers
-        int TRANSPARANT = 2;
-        int[] decodedImage = new int[wide * tall];
-        for (int i = 0; i < decodedImage.length; i++) {
-            for (int layer = 0; layer < nrLayers; layer++) {
-                if (encodedImage[layer][i] != TRANSPARANT) {
-                    decodedImage[i] = encodedImage[layer][i];
-                    break;
-                }
-            }
-        }
-
+        Image decodedImage = encodedImage.decodeImage();
+        Layer layer = decodedImage.getLayers().get(0);
         // print the image/message
-        for (int i = 0; i < decodedImage.length; i++) {
-            if (i % wide == 0) {
+        for (int i = 0; i < layer.getPixels().size(); i++) {
+            if (i % WIDE == 0) {
                 System.out.println();
             }
-            if (decodedImage[i] == 0) {
+            if (layer.getPixels().get(i) == 0) {
                 System.out.print(" ");
             } else {
                 System.out.print('#');
