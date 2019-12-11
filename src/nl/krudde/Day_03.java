@@ -107,7 +107,37 @@ public class Day_03 {
         R,
         L,
         U,
-        D
+        D;
+
+        Direction nextDirection(Day_11.Direction direction) {
+            switch (this) {
+                case D -> {
+                    return switch (direction) {
+                        case LEFT90 -> R;
+                        case RIGHT90 -> L;
+                    };
+                }
+                case U -> {
+                    return switch (direction) {
+                        case LEFT90 -> L;
+                        case RIGHT90 -> R;
+                    };
+                }
+                case R -> {
+                    return switch (direction) {
+                        case LEFT90 -> U;
+                        case RIGHT90 -> D;
+                    };
+                }
+                case L -> {
+                    return switch (direction) {
+                        case LEFT90 -> D;
+                        case RIGHT90 -> U;
+                    };
+                }
+            }
+            throw new IllegalStateException("unknown state: current direction: " + direction + " intended direction: " + direction);
+        }
     }
 
     static class Wire {
@@ -187,5 +217,10 @@ public class Day_03 {
                 case L -> new Point(getX() - distance, getY());
             };
         }
+
+        Point nextPoint(Point delta) {
+            return new Point(x + delta.getX(), y + delta.getY());
+        }
+
     }
 }
