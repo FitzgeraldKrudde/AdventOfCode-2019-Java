@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
 public class Day_06 {
@@ -48,7 +49,7 @@ public class Day_06 {
         List<String> santaParents = getParents("SAN");
         //find unique elements and correct (-2) for ourselves (YOU/SAN)
         long transfers = Stream.concat(myParents.stream(), santaParents.stream())
-                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .collect(groupingBy(Function.identity(), Collectors.counting()))
                 .entrySet()
                 .stream()
                 .filter(e -> e.getValue() == 1)
