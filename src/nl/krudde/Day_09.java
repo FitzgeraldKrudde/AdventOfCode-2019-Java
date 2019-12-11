@@ -46,7 +46,6 @@ class IntcodeV4 {
     public void run() {
         int opcode;
         double firstParameter, secondParameter;
-        boolean waitingForInput = false;
 
         if (!initialised) {
             double[] inputProgram = program;
