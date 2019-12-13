@@ -2,8 +2,6 @@ package nl.krudde;
 
 import lombok.Builder;
 import lombok.Data;
-import nl.krudde.Day_03.Point;
-import nl.krudde.Day_11.Mode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,7 +18,7 @@ import static java.util.stream.Collectors.toList;
 class IntcodeV5 {
     private double[] program;
     private int position;
-    private int relativeBase = 0;
+    private int relativeBase;
 
     @Builder.Default
     private boolean halted = false;
@@ -139,12 +137,11 @@ class IntcodeV5 {
 
     private int getPosition(int positionInstruction, int index) {
         int instruction = (int) program[positionInstruction];
-        int mode = (int) ((instruction / (10 * (int) Math.pow(10, index))) % 10);
+        int mode = (instruction / (10 * (int) Math.pow(10, index))) % 10;
         return switch (Mode.of(mode)) {
             case MODE_IMMEDIATE -> positionInstruction + index;
             case MODE_POSITION -> (int) program[positionInstruction + index];
             case MODE_RELATIVE -> (int) (program[positionInstruction + index] + relativeBase);
-            default -> throw new IllegalStateException("unknown mode: " + mode);
         };
     }
 }
@@ -171,7 +168,7 @@ public class Day_11 {
 
         final Map<Point, Color> map = new HashMap<>();
         Point currentLocation = new Point(0, 0);
-        Day_03.Direction currentDirection = Day_03.Direction.U;
+        Direction currentDirection = Direction.U;
 
         map.put(currentLocation, Color.BLACK);
         intcode.addInput(0);
@@ -180,7 +177,7 @@ public class Day_11 {
             intcode.run();
             Color color = Color.of(intcode.getOutput());
             map.put(currentLocation, color);
-            Direction direction = Direction.of(intcode.getOutput());
+            PaintRobotDirection direction = PaintRobotDirection.of(intcode.getOutput());
             currentDirection = currentDirection.nextDirection(direction);
             currentLocation = currentLocation.nextPoint(currentDirection, 1);
 
@@ -208,7 +205,7 @@ public class Day_11 {
 
         map.clear();
         currentLocation = new Point(0, 0);
-        currentDirection = Day_03.Direction.U;
+        currentDirection = Direction.U;
 
         map.put(currentLocation, Color.BLACK);
         intcode.addInput(1);
@@ -217,7 +214,7 @@ public class Day_11 {
             intcode.run();
             Color color = Color.of(intcode.getOutput());
             map.put(currentLocation, color);
-            Direction direction = Direction.of(intcode.getOutput());
+            PaintRobotDirection direction = PaintRobotDirection.of(intcode.getOutput());
             currentDirection = currentDirection.nextDirection(direction);
             currentLocation = currentLocation.nextPoint(currentDirection, 1);
 
@@ -277,39 +274,35 @@ public class Day_11 {
 
         return input;
     }
+}
 
-    enum Color {
-        BLACK,
-        WHITE;
+enum Color {
+    BLACK,
+    WHITE;
 
-        static Color of(int i) {
-            if (i == 0) return BLACK;
-            if (i == 1) return WHITE;
-            throw new IllegalArgumentException("unknown color: " + i);
-        }
+    static Color of(int i) {
+        return switch (i) {
+            case 0 -> BLACK;
+            case 1 -> WHITE;
+            default -> throw new IllegalArgumentException("unknown color: " + i);
+        };
     }
+}
 
-    enum Direction {
-        LEFT90,
-        RIGHT90;
 
-        static Direction of(int i) {
-            if (i == 0) return LEFT90;
-            if (i == 1) return RIGHT90;
-            throw new IllegalArgumentException("unknown direction: " + i);
-        }
-    }
 
-    enum Mode {
-        MODE_POSITION,
-        MODE_IMMEDIATE,
-        MODE_RELATIVE;
 
-        static Mode of(int i) {
-            if (i == 0) return MODE_POSITION;
-            if (i == 1) return MODE_IMMEDIATE;
-            if (i == 2) return MODE_RELATIVE;
-            throw new IllegalArgumentException("unknown mode: " + i);
-        }
+enum Mode {
+    MODE_POSITION,
+    MODE_IMMEDIATE,
+    MODE_RELATIVE;
+
+    static Mode of(int i) {
+        return switch (i) {
+            case 0 -> MODE_POSITION;
+            case 1 -> MODE_IMMEDIATE;
+            case 2 -> MODE_RELATIVE;
+            default -> throw new IllegalArgumentException("unknown mode: " + i);
+        };
     }
 }
