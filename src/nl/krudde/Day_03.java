@@ -23,7 +23,7 @@ public class Day_03 {
     final static String DEFAULT_FILENAME = new Object() {
     }.getClass().getEnclosingClass().getSimpleName().toLowerCase().replace("_0", "_") + ".txt";
 
-    final static Point startPoint = new Point(0, 0);
+    public final static Point STARTPOINT = new Point(0, 0);
 
     public static void main(String[] args) throws IOException {
         LocalTime start = LocalTime.now();
@@ -46,10 +46,10 @@ public class Day_03 {
 
         Point closestIntersection =
                 intersections.stream()
-                        .min(comparingInt(p -> calculateManhattanDistance(startPoint, p)))
+                        .min(comparingInt(p -> calculateManhattanDistance(STARTPOINT, p)))
                         .orElseThrow(() -> new IllegalStateException("no intersection found"));
 
-        int closestIntersectionDistance = calculateManhattanDistance(startPoint, closestIntersection);
+        int closestIntersectionDistance = calculateManhattanDistance(STARTPOINT, closestIntersection);
         System.out.println("closestIntersectionDistance = " + closestIntersectionDistance);
 
         LocalTime finish = LocalTime.now();
@@ -74,7 +74,7 @@ public class Day_03 {
     }
 
     private static Wire buildWire(String s) {
-        Wire wire = new Wire();
+        Wire wire = new Wire(STARTPOINT);
         Arrays.stream(s.split(","))
                 .forEach(wire::addDirection);
         return wire;
@@ -102,125 +102,141 @@ public class Day_03 {
 
         return input;
     }
+}
 
-    enum Direction {
-        R,
-        L,
-        U,
-        D;
+enum PaintRobotDirection {
+    LEFT90,
+    RIGHT90;
 
-        Direction nextDirection(Day_11.Direction direction) {
-            switch (this) {
-                case D -> {
-                    return switch (direction) {
-                        case LEFT90 -> R;
-                        case RIGHT90 -> L;
-                    };
-                }
-                case U -> {
-                    return switch (direction) {
-                        case LEFT90 -> L;
-                        case RIGHT90 -> R;
-                    };
-                }
-                case R -> {
-                    return switch (direction) {
-                        case LEFT90 -> U;
-                        case RIGHT90 -> D;
-                    };
-                }
-                case L -> {
-                    return switch (direction) {
-                        case LEFT90 -> D;
-                        case RIGHT90 -> U;
-                    };
-                }
+    static PaintRobotDirection of(int i) {
+        return switch (i) {
+            case 0 -> LEFT90;
+            case 1 -> RIGHT90;
+            default -> throw new IllegalArgumentException("unknown direction: " + i);
+        };
+    }
+}
+
+enum Direction {
+    R,
+    L,
+    U,
+    D;
+
+    Direction nextDirection(PaintRobotDirection direction) {
+        switch (this) {
+            case D -> {
+                return switch (direction) {
+                    case LEFT90 -> R;
+                    case RIGHT90 -> L;
+                };
             }
-            throw new IllegalStateException("unknown state: current direction: " + direction + " intended direction: " + direction);
+            case U -> {
+                return switch (direction) {
+                    case LEFT90 -> L;
+                    case RIGHT90 -> R;
+                };
+            }
+            case R -> {
+                return switch (direction) {
+                    case LEFT90 -> U;
+                    case RIGHT90 -> D;
+                };
+            }
+            case L -> {
+                return switch (direction) {
+                    case LEFT90 -> D;
+                    case RIGHT90 -> U;
+                };
+            }
         }
+        throw new IllegalStateException("unknown state: current direction: " + direction + " intended direction: " + direction);
+    }
+}
+
+class Wire {
+    Point end;
+    @Getter
+    List<Path> pathList = new ArrayList<>();
+
+    Wire(Point start) {
+        end = start;
     }
 
-    static class Wire {
-        Point end = startPoint;
-        @Getter
-        List<Path> pathList = new ArrayList<>();
+    public void addDirection(String direction) {
+        int length = Integer.parseInt(direction.substring(1));
 
-        public void addDirection(String direction) {
-            int length = Integer.parseInt(direction.substring(1));
+        Direction d = Direction.valueOf(direction.substring(0, 1));
+        Point point = switch (d) {
+            case R -> new Point(end.getX() + length, end.getY());
+            case L -> new Point(end.getX() - length, end.getY());
+            case U -> new Point(end.getX(), end.getY() - length);
+            case D -> new Point(end.getX(), end.getY() + length);
+        };
+        pathList.add(new Path(end, point, d));
+        end = point;
+    }
 
-            Direction d = Direction.valueOf(direction.substring(0, 1));
-            Point point = switch (d) {
-                case R -> new Point(end.getX() + length, end.getY());
-                case L -> new Point(end.getX() - length, end.getY());
-                case U -> new Point(end.getX(), end.getY() - length);
-                case D -> new Point(end.getX(), end.getY() + length);
-            };
-            pathList.add(new Path(end, point, d));
-            end = point;
-        }
+    public List<Point> getAllPoints() {
+        return getPathList().stream()
+                .flatMap(path -> path.getPoints().stream())
+                .collect(toList());
+    }
+}
 
-        public List<Point> getAllPoints() {
-            return getPathList().stream()
-                    .flatMap(path -> path.getPoints().stream())
+@Data
+@RequiredArgsConstructor
+class Path {
+    @NonNull
+    final Point start, end;
+    @NonNull
+    final Direction direction;
+    List<Point> points = null;
+
+    int getLength() {
+        return switch (direction) {
+            case D -> Math.abs(start.getY() - end.getY());
+            case U -> Math.abs(end.getY() - start.getY());
+            case L -> Math.abs(start.getX() - end.getX());
+            case R -> Math.abs(end.getX() - start.getX());
+        };
+    }
+
+    List<Point> getPoints() {
+        if (points == null) {
+            points = IntStream.rangeClosed(1, getLength())
+                    .mapToObj(i -> start.nextPoint(direction, i))
                     .collect(toList());
         }
+        return points;
     }
+}
 
-    @Data
-    @RequiredArgsConstructor
-    static class Path {
-        @NonNull
-        final Point start, end;
-        @NonNull
-        final Direction direction;
-        List<Point> points = null;
+@Data
+@AllArgsConstructor
+class Point implements Comparable<Point> {
+    private int x;
+    private int y;
 
-        int getLength() {
-            return switch (direction) {
-                case D -> Math.abs(start.getY() - end.getY());
-                case U -> Math.abs(end.getY() - start.getY());
-                case L -> Math.abs(start.getX() - end.getX());
-                case R -> Math.abs(end.getX() - start.getX());
-            };
-        }
-
-        List<Point> getPoints() {
-            if (points == null) {
-                points = IntStream.rangeClosed(1, getLength())
-                        .mapToObj(i -> start.nextPoint(direction, i))
-                        .collect(toList());
-            }
-            return points;
+    @Override
+    public int compareTo(Point o) {
+        if (this.y == o.y) {
+            return x - o.x;
+        } else {
+            return y - o.y;
         }
     }
 
-    @Data
-    @AllArgsConstructor
-    static class Point implements Comparable<Point> {
-        private int x;
-        private int y;
+    Point nextPoint(Direction direction, int distance) {
+        return switch (direction) {
+            case D -> new Point(getX(), getY() + distance);
+            case U -> new Point(getX(), getY() - distance);
+            case R -> new Point(getX() + distance, getY());
+            case L -> new Point(getX() - distance, getY());
+        };
+    }
 
-        @Override
-        public int compareTo(Point o) {
-            if (this.y == o.y) {
-                return x - o.x;
-            } else {
-                return y - o.y;
-            }
-        }
-
-        Point nextPoint(Direction direction, int distance) {
-            return switch (direction) {
-                case D -> new Point(getX(), getY() + distance);
-                case U -> new Point(getX(), getY() - distance);
-                case R -> new Point(getX() + distance, getY());
-                case L -> new Point(getX() - distance, getY());
-            };
-        }
-
-        Point nextPoint(Point delta) {
-            return new Point(x + delta.getX(), y + delta.getY());
-        }
-
+    Point nextPoint(Point delta) {
+        return new Point(x + delta.getX(), y + delta.getY());
     }
 }
