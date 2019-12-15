@@ -1,5 +1,6 @@
 package nl.krudde;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
@@ -291,6 +292,7 @@ public class Day_13 {
     }
 }
 
+@AllArgsConstructor
 enum Tile {
     EMPTY(' '),
     WALL('#'),
@@ -300,10 +302,6 @@ enum Tile {
 
     @Getter
     private final char printCharacter;
-
-    Tile(char printCharacter) {
-        this.printCharacter = printCharacter;
-    }
 
     static Tile of(int type) {
         return switch (type) {
