@@ -236,6 +236,15 @@ class Point implements Comparable<Point> {
         };
     }
 
+    Point nextPoint(Move move) {
+        return switch (move) {
+            case N -> new Point(getX(), getY() - 1);
+            case S -> new Point(getX(), getY() + 1);
+            case W -> new Point(getX() - 1, getY());
+            case E -> new Point(getX() + 1, getY());
+        };
+    }
+
     Point nextPoint(Point delta) {
         return new Point(x + delta.getX(), y + delta.getY());
     }
