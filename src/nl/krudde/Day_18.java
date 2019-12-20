@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -48,6 +49,12 @@ public class Day_18 {
         // part 2
         start = LocalTime.now();
         System.out.println("\npart 2: ");
+
+        // modify entrance
+        undergroundVault.fixMapForPart2();
+
+        long nrStepsToCollectAllKeysPart2 = undergroundVault.collectAllKeysPart2();
+        System.out.println("nrStepsToCollectAllKeysPart2 = " + nrStepsToCollectAllKeysPart2);
 
         finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
@@ -92,12 +99,17 @@ enum VaultFieltType {
 @Data
 class UndergroundVault {
     //    private final static int UNREACHABLE = Integer.MAX_VALUE;
-    private final static int UNREACHABLE = 9999;
-    Map<Point, VaultFieltType> area = new TreeMap<>();
-    private Map<Point, Character> keys = new TreeMap<>();
-    private Map<Point, Character> doors = new TreeMap<>();
-    private Map<String, Integer> cache = new TreeMap<>();
+    private final static int UNREACHABLE = 999999;
+    Map<Point, VaultFieltType> area = new HashMap<>();
+    private Map<Point, Character> keys = new HashMap<>();
+    private Map<Point, Character> doors = new HashMap<>();
+    private Map<String, Integer> cache = new ConcurrentHashMap<>();
     private Point entrance;
+    // for part2
+    private Point entranceUpperLeft;
+    private Point entranceUpperRight;
+    private Point entranceLowerLeft;
+    private Point entranceLowerRight;
 
     UndergroundVault(List<String> input) {
         AtomicInteger x = new AtomicInteger(0);
@@ -194,6 +206,23 @@ class UndergroundVault {
                 .filter(point -> !doors.containsKey(point))
                 .collect(Collectors.toSet());
 
+        // for part 2: limit the unvisited points based on the quadrant
+        if (!src.equals(entrance)) {
+            //part 2
+            if(src.equals(entranceUpperLeft)){
+                unvisitedPoints.removeIf(point->!isUpperLeft(point));
+            }
+            if(src.equals(entranceUpperRight)){
+                unvisitedPoints.removeIf(point->!isUpperRight(point));
+            }
+            if(src.equals(entranceLowerLeft)){
+                unvisitedPoints.removeIf(point->!isLowerLeft(point));
+            }
+            if(src.equals(entranceLowerRight)){
+                unvisitedPoints.removeIf(point->!isLowerRight(point));
+            }
+        }
+
         // Map with points and (minimum) distance, initially unreachable
         Map<Point, Integer> mapPointWithDistance = unvisitedPoints.stream()
                 .collect(toMap(point -> point, point -> UNREACHABLE));
@@ -273,15 +302,110 @@ class UndergroundVault {
                     return entry.getValue() + collectAllKeys(entry.getKey(), newDoors, newKeys);
                 })
                 .min()
-                .orElse(9999);
+                .orElse(UNREACHABLE);
 
         cache.put(cacheKey, (int) nrSteps);
-        System.out.println("#cache=" + cache.size() + " " + point + " #D=" + doors.size() + " #K=" + keys.size());
+//        System.out.println("#cache=" + cache.size() + " " + point + " #D=" + doors.size() + " #K=" + keys.size());
         return nrSteps;
     }
 
     private String cacheKey(Point point, Map<Point, Character> doors, Map<Point, Character> keys) {
         return point.toString() + doors.toString() + keys.toString();
+    }
+
+    public void fixMapForPart2() {
+        area.put(entrance, WALL);
+        area.put(entrance.nextPoint(Direction.U), WALL);
+        area.put(entrance.nextPoint(Direction.D), WALL);
+        area.put(entrance.nextPoint(Direction.L), WALL);
+        area.put(entrance.nextPoint(Direction.R), WALL);
+
+        entranceUpperLeft = entrance.nextPoint(Direction.U).nextPoint(Direction.L);
+        entranceUpperRight = entrance.nextPoint(Direction.U).nextPoint(Direction.R);
+        entranceLowerLeft = entrance.nextPoint(Direction.D).nextPoint(Direction.L);
+        entranceLowerRight = entrance.nextPoint(Direction.D).nextPoint(Direction.R);
+    }
+
+    public long collectAllKeysPart2() {
+        // calculate per quadrant, ignore doors from other quadrants, will be opened by other robots in the other quadrants
+
+        long upperLeftSteps = getUpperLeftSteps();
+        System.out.println("upperLeftSteps = " + upperLeftSteps);
+
+        long upperRightSteps = getUpperRightSteps();
+        System.out.println("upperRightSteps = " + upperRightSteps);
+
+        long lowerLeftSteps = getLowerLeftSteps();
+        System.out.println("lowerLeftSteps = " + lowerLeftSteps);
+
+        long lowerRightSteps = getLowerRightSteps();
+        System.out.println("lowerRightSteps = " + lowerRightSteps);
+
+        return upperLeftSteps + upperRightSteps + lowerLeftSteps + lowerRightSteps;
+    }
+
+    private boolean isUpperLeft(Point point) {
+        return point.getX() < entrance.getX() && point.getY() < entrance.getY();
+    }
+
+    private boolean isUpperRight(Point point) {
+        return point.getX() > entrance.getX() && point.getY() < entrance.getY();
+    }
+
+    private boolean isLowerLeft(Point point) {
+        return point.getX() < entrance.getX() && point.getY() > entrance.getY();
+    }
+
+    private boolean isLowerRight(Point point) {
+        return point.getX() > entrance.getX() && point.getY() > entrance.getY();
+    }
+
+    private long getLowerRightSteps() {
+        cache.clear();
+        Map<Point, Character> keysLowerRight = new HashMap<>(keys);
+        keysLowerRight.entrySet().removeIf(entry -> !isLowerRight(entry.getKey()));
+
+        Map<Point, Character> doorsLowerRight = new HashMap<>(doors);
+        doorsLowerRight.entrySet().removeIf(entry -> !isLowerRight(entry.getKey()));
+        doorsLowerRight.entrySet().removeIf(entry -> !keysLowerRight.containsValue(Character.toLowerCase(entry.getValue())));
+
+        return collectAllKeys(entranceLowerRight, doorsLowerRight, keysLowerRight);
+    }
+
+    private long getLowerLeftSteps() {
+        cache.clear();
+        Map<Point, Character> keysLowerLeft = new HashMap<>(keys);
+        keysLowerLeft.entrySet().removeIf(entry -> !isLowerLeft(entry.getKey()));
+
+        Map<Point, Character> doorsLowerLeft = new HashMap<>(doors);
+        doorsLowerLeft.entrySet().removeIf(entry -> !isLowerLeft(entry.getKey()));
+        doorsLowerLeft.entrySet().removeIf(entry -> !keysLowerLeft.containsValue(Character.toLowerCase(entry.getValue())));
+
+        return collectAllKeys(entranceLowerLeft, doorsLowerLeft, keysLowerLeft);
+    }
+
+    private long getUpperLeftSteps() {
+        cache.clear();
+        Map<Point, Character> keysUpperLeft = new HashMap<>(keys);
+        keysUpperLeft.entrySet().removeIf(entry -> !isUpperLeft(entry.getKey()));
+
+        Map<Point, Character> doorsUpperLeft = new HashMap<>(doors);
+        doorsUpperLeft.entrySet().removeIf(entry -> !isUpperLeft(entry.getKey()));
+        doorsUpperLeft.entrySet().removeIf(entry -> !keysUpperLeft.containsValue(Character.toLowerCase(entry.getValue())));
+
+        return collectAllKeys(entranceUpperLeft, doorsUpperLeft, keysUpperLeft);
+    }
+
+    private long getUpperRightSteps() {
+        cache.clear();
+        Map<Point, Character> keysUpperRight = new HashMap<>(keys);
+        keysUpperRight.entrySet().removeIf(entry -> !isUpperRight(entry.getKey()));
+
+        Map<Point, Character> doorsUpperRight = new HashMap<>(doors);
+        doorsUpperRight.entrySet().removeIf(entry -> !isUpperRight(entry.getKey()));
+        doorsUpperRight.entrySet().removeIf(entry -> !keysUpperRight.containsValue(Character.toLowerCase(entry.getValue())));
+
+        return collectAllKeys(entranceUpperRight, doorsUpperRight, keysUpperRight);
     }
 }
 
