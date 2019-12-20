@@ -227,6 +227,10 @@ class Point implements Comparable<Point> {
         }
     }
 
+    Point nextPoint(Direction direction) {
+        return nextPoint(direction,1);
+    }
+
     Point nextPoint(Direction direction, int distance) {
         return switch (direction) {
             case D -> new Point(getX(), getY() + distance);
