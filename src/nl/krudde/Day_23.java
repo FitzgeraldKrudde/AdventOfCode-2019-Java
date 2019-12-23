@@ -176,7 +176,7 @@ public class Day_23 {
         double[] intCodeProgram = Arrays.stream(input.split(","))
                 .mapToDouble(Double::valueOf)
                 .toArray();
-        // build 50 computers
+        // build network with 50 computers
         int nrComputers = 50;
         Network network = new Network(nrComputers, intCodeProgram);
 
@@ -239,12 +239,12 @@ class Message {
 }
 
 class Network {
-    List<IntcodeV11> computers = new ArrayList<>();
-    List<Message> messages = new ArrayList<>();
+    private List<IntcodeV11> computers = new ArrayList<>();
+    private List<Message> messages = new ArrayList<>();
     private boolean receiveIdle = false;
     private boolean sendIdle = false;
-    Message natMessage;
-    Set<Long> sendNATYValues = new HashSet<>();
+    private Message natMessage;
+    private Set<Long> sendNATYValues = new HashSet<>();
     private Optional<Long> firstDuplicateYValueSentToNAT = Optional.empty();
 
     Network(int nrComputers, double[] program) {
@@ -266,7 +266,6 @@ class Network {
                 .forEach(i -> {
                     IntcodeV11 computer = computers.get(i);
                     computer.addInput((long) i);
-                    computer.addInput((long) -1);
                     computer.run();
                     while (computer.hasOutput()) {
                         // read address, x, y
