@@ -179,7 +179,7 @@ public class Day_11 {
             map.put(currentLocation, color);
             PaintRobotDirection direction = PaintRobotDirection.of(intcode.getOutput());
             currentDirection = currentDirection.nextDirection(direction);
-            currentLocation = currentLocation.nextPoint(currentDirection, 1);
+            currentLocation = currentLocation.nextPoint(currentDirection);
 
             if (!map.containsKey(currentLocation)) {
                 map.put(currentLocation, Color.BLACK);
@@ -216,7 +216,7 @@ public class Day_11 {
             map.put(currentLocation, color);
             PaintRobotDirection direction = PaintRobotDirection.of(intcode.getOutput());
             currentDirection = currentDirection.nextDirection(direction);
-            currentLocation = currentLocation.nextPoint(currentDirection, 1);
+            currentLocation = currentLocation.nextPoint(currentDirection);
 
             if (!map.containsKey(currentLocation)) {
                 map.put(currentLocation, Color.BLACK);
