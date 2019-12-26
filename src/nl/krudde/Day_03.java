@@ -215,8 +215,11 @@ class Path {
 @Data
 @AllArgsConstructor
 class Point implements Comparable<Point> {
-    private int x;
-    private int y;
+    protected int x;
+    protected int y;
+
+    Point(){
+    }
 
     @Override
     public int compareTo(Point o) {
