@@ -42,7 +42,6 @@ public class Day_22 {
         start = LocalTime.now();
         System.out.println("\npart 2: ");
 
-
         finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
     }
@@ -79,18 +78,14 @@ class Deck {
     }
 
     public void cut(int size) {
-        if (size > 0) {
-            List<Integer> cut = deck.subList(0, size);
-            List<Integer> newDeck = new ArrayList<>(deck.subList(size, deck.size()));
-            newDeck.addAll(cut);
-            deck = newDeck;
-        } else if (size < 0) {
-            int s = Math.abs(size);
-            List<Integer> newDeck = deck.subList(deck.size() - s, deck.size());
-            List<Integer> remainder = new ArrayList<>(deck.subList(0, deck.size() - s));
-            newDeck.addAll(remainder);
-            deck = newDeck;
+        if (size < 0) {
+            size = deck.size() + size;
         }
+
+        List<Integer> cut = deck.subList(0, size);
+        List<Integer> newDeck = new ArrayList<>(deck.subList(size, deck.size()));
+        newDeck.addAll(cut);
+        deck = newDeck;
     }
 
     public void dealWithIncrement(int incrementN) {
