@@ -229,6 +229,7 @@ public class Day_13 {
                     Tile tile = Tile.of(intcode.getOutput());
                     if (tile == Tile.BALL) {
                         ballLocation = new Point(x, y);
+                        screen[x][y] = Tile.EMPTY;
                     }
                     if (tile == Tile.PADDLE) {
                         paddleLocation = new Point(x, y);
@@ -236,6 +237,7 @@ public class Day_13 {
                     screen[x][y] = tile;
                 }
             }
+            printScreen(screen, ballLocation);
 
             if (intcode.isWaitingForInput()) {
                 JoystickMode joystickMode = JOYSTICK_NEUTRAL;
@@ -263,12 +265,18 @@ public class Day_13 {
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
     }
 
-    private static void printScreen(Tile[][] screen) {
+    private static void printScreen(Tile[][] screen, Point ballLocation) {
         for (int y = 0; y < 22; y++) {
             for (int x = 0; x < screen[0].length; x++) {
-                Tile tile = screen[x][y];
-                if (tile != null) {
-                    System.out.print(tile.getPrintCharacter());
+                if (ballLocation.equals(new Point(x, y))) {
+                    final String ANSI_RESET = "\u001B[0m";
+                    final String ANSI_RED = "\u001B[31m";
+                    System.out.print(ANSI_RED + '*' + ANSI_RESET);
+                } else {
+                    Tile tile = screen[x][y];
+                    if (tile != null) {
+                        System.out.print(tile.getPrintCharacter());
+                    }
                 }
             }
             System.out.println();
