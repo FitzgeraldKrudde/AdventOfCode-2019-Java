@@ -18,8 +18,8 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static nl.krudde.VaultFieltType.OPEN;
-import static nl.krudde.VaultFieltType.WALL;
+import static nl.krudde.VaultFieldType.OPEN;
+import static nl.krudde.VaultFieldType.WALL;
 
 @Data
 @Builder
@@ -79,7 +79,7 @@ public class Day_18 {
 }
 
 @AllArgsConstructor
-enum VaultFieltType {
+enum VaultFieldType {
     WALL('#'),
     OPEN('.'),
     ENTRANCE('@'),
@@ -88,7 +88,7 @@ enum VaultFieltType {
     @Getter
     private final char printCharacter;
 
-    static VaultFieltType of(int i) {
+    static VaultFieldType of(int i) {
         return Arrays.stream(values())
                 .filter(c -> c.printCharacter == i)
                 .findFirst()
@@ -100,7 +100,7 @@ enum VaultFieltType {
 class UndergroundVault {
     //    private final static int UNREACHABLE = Integer.MAX_VALUE;
     private final static int UNREACHABLE = 999999;
-    Map<Point, VaultFieltType> area = new HashMap<>();
+    Map<Point, VaultFieldType> area = new HashMap<>();
     private Map<Point, Character> keys = new HashMap<>();
     private Map<Point, Character> doors = new HashMap<>();
     private Map<String, Integer> cache = new ConcurrentHashMap<>();
@@ -120,7 +120,7 @@ class UndergroundVault {
                     line.chars()
                             .forEach(c -> {
                                 Point point = new Point(x.get(), y.get());
-                                if (c == VaultFieltType.ENTRANCE.getPrintCharacter()) {
+                                if (c == VaultFieldType.ENTRANCE.getPrintCharacter()) {
                                     entrance = point;
                                     area.put(point, OPEN);
                                 } else {
@@ -132,7 +132,7 @@ class UndergroundVault {
                                         }
                                         area.put(point, OPEN);
                                     } else {
-                                        area.put(point, VaultFieltType.of(c));
+                                        area.put(point, VaultFieldType.of(c));
                                     }
                                 }
                                 x.incrementAndGet();
@@ -152,7 +152,7 @@ class UndergroundVault {
                                 assert area.keySet().contains(new Point(x, y));
                                 Point p = new Point(x, y);
                                 if (p.equals(entrance)) {
-                                    System.out.print(VaultFieltType.ENTRANCE.getPrintCharacter());
+                                    System.out.print(VaultFieldType.ENTRANCE.getPrintCharacter());
                                 } else if (doors.keySet().contains(p)) {
                                     System.out.print(doors.get(p));
                                 } else if (keys.containsKey(p)) {
