@@ -1,9 +1,6 @@
 package nl.krudde;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
+import lombok.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,10 +8,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
 import static nl.krudde.Direction.*;
 
 @Data
@@ -195,22 +191,19 @@ public class Day_17 {
         start = LocalTime.now();
         System.out.println("\npart 2: ");
 
-        List<String> segmentspath = vacuumRobotComputer.determineSegments();
-        System.out.println("segmentspath = " + segmentspath.toString().replaceAll(", ", ""));
-        // L12L12L6L6R8R4L12L12L12L6L6L12L6R12R8R8R4L12L12L12L6L6L12L6R12R8R8R4L12L12L12L6L6L12L6R12R8
-
         intcode = new IntcodeV8.IntcodeV8Builder()
                 .program(intCodeProgram)
                 .build();
+        vacuumRobotComputer.setProgram(intcode);
 
-        vacuumRobotComputer = new VacuumRobotComputer(intcode);
-        int nrDust = vacuumRobotComputer.walkAllScaffoldsAndCollectDust();
+        boolean computeSolution = true;
+        // set to false for handmade solution
+        int nrDust = vacuumRobotComputer.walkAllScaffoldsAndCollectDust(computeSolution);
         System.out.println("nrDust = " + nrDust);
 
         finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
     }
-
 
     private static List<String> readFile(String[] args) throws IOException {
         String fileName;
@@ -249,9 +242,10 @@ enum MapCoordinateType {
 
 @Data
 class VacuumRobotComputer {
+    @Setter
     private IntcodeV8 program;
 
-    Map<Point, MapCoordinateType> area = new TreeMap<>();
+    private Map<Point, MapCoordinateType> area = new TreeMap<>();
 
     private Point vacuumRobotLocation;
     private Direction vacuumRobotDirection;
@@ -384,6 +378,7 @@ class VacuumRobotComputer {
     }
 
     public List<String> determineSegments() {
+        // find path from start to end
         List<String> segmentList = new ArrayList<>();
         Point currentPoint = vacuumRobotLocation;
         Point startingPoint = currentPoint;
@@ -408,7 +403,6 @@ class VacuumRobotComputer {
                 currentDirection = nextDirection;
             }
         }
-
 
         return segmentList;
     }
@@ -477,7 +471,7 @@ class VacuumRobotComputer {
         return longs;
     }
 
-    int walkAllScaffoldsAndCollectDust() {
+    private Solution handmadeSolution() {
         // movement functions
         String mfA = "L,12,L,12,L,6,L,6";
         String mfB = "R,8,R,4,L,12";
@@ -486,14 +480,24 @@ class VacuumRobotComputer {
         String mainMovementRoutine = "A,B,A,C,B,A,C,B,A,C";
         // (L12L12L6L6)(R8R4L12)(L12L12L6L6)(L12L6R12R8)(R8R4L12)(L12L12L6L6)(L12L6R12R8)(R8R4L12)(L12L12L6L6)(L12L6R12R8)
         //       A         B          A           C         B          A           C         B          A           C
+        return new Solution(mainMovementRoutine, mfA, mfB, mfC);
+    }
 
+    int walkAllScaffoldsAndCollectDust(boolean compute) {
+        if (compute) {
+            return walkAllScaffoldsAndCollectDust(computeSolution());
+        } else {
+            return walkAllScaffoldsAndCollectDust(handmadeSolution());
+        }
+    }
+
+    int walkAllScaffoldsAndCollectDust(Solution solution) {
         program.setMemoryZeroValue(2);
-        sendCommandAndReceiveOutput(mainMovementRoutine);
-        sendCommandAndReceiveOutput(mfA);
-        sendCommandAndReceiveOutput(mfB);
-        sendCommandAndReceiveOutput(mfC);
+        String output = sendCommandAndReceiveOutput(solution.getMainRoutine());
+        output = sendCommandAndReceiveOutput(solution.getMovementFunctionA());
+        output = sendCommandAndReceiveOutput(solution.getMovementFunctionB());
+        output = sendCommandAndReceiveOutput(solution.getMovementFunctionC());
         sendCommand("n");
-//        System.out.println("output = " + getOutput());
 
         return getNrDustFromOutput();
     }
@@ -515,5 +519,74 @@ class VacuumRobotComputer {
 
         return Integer.parseInt(nrDust.toString());
     }
+
+    private Solution computeSolution() {
+        List<String> segments = determineSegments();
+        Solution solution = computeSolutionForSegments(segments);
+        return solution;
+    }
+
+    private Solution computeSolutionForSegments(List<String> pathSegments) {
+        final String path = String.join("", pathSegments);
+        // L12L12L6L6R8R4L12L12L12L6L6L12L6R12R8R8R4L12L12L12L6L6L12L6R12R8R8R4L12L12L12L6L6L12L6R12R8
+
+        // I tried solving this with regex but could not make it work..
+        // For some time I was puzzled to create an algorithm but actually it is not too hard:
+        // - create a (growing) group from the start (A) and create a (growing) group starting at the end (C)
+        // - remove all of them from the complete path and check if we have 1 unique group (B) left
+
+        int minSize = 1;
+        int maxSize = 10;
+
+        for (int firstGroupSize = minSize; firstGroupSize < maxSize; firstGroupSize++) {
+            String firstGroup = String.join("", pathSegments.subList(0, firstGroupSize));
+            String segmentsWithFirstGroupReplaced = path.replaceAll(firstGroup, "xxx");
+
+            for (int lastGroupSize = minSize; lastGroupSize < maxSize; lastGroupSize++) {
+                String lastGroup = String.join("", pathSegments.subList(pathSegments.size() - lastGroupSize, pathSegments.size()));
+                String segmentsWithFirstAndLastGroupReplaced = segmentsWithFirstGroupReplaced.replaceAll(lastGroup, "xxx");
+                // check if we have only 1 unique group left
+                List<String> remainingGroups = Arrays.stream(segmentsWithFirstAndLastGroupReplaced.split("xxx"))
+                        .filter(s -> s.length() > 0)
+                        .collect(toList());
+                if (remainingGroups.stream().distinct().count() > 1) {
+                    continue;
+                }
+                String secondGroup = remainingGroups.stream().findFirst().orElseThrow(() -> new IllegalStateException("no 2nd segment"));
+
+                // construct main routine
+                String mainRoutine = path
+                        .replaceAll(firstGroup, "A")
+                        .replaceAll(secondGroup, "B")
+                        .replaceAll(lastGroup, "C");
+
+                // check if main routine is not too long
+                if (mainRoutine.length() > 10) {
+                    continue;
+                }
+
+                // add all the needed comma's and return the solution
+                return new Solution(addCommas(mainRoutine), addCommas(firstGroup), addCommas(secondGroup), addCommas(lastGroup));
+            }
+        }
+        throw new IllegalStateException("no solution found");
+    }
+
+    private String addCommas(String s) {
+        String result = s
+                .replaceAll("([ABC])", "$1,")
+                .replaceAll("([LR])", "$1,")
+                .replaceAll("([0-9]{1,2})", "$1,");
+        return result.substring(0, result.length() - 1);
+    }
+
 }
 
+@AllArgsConstructor
+@Data
+class Solution {
+    private String mainRoutine;
+    private String movementFunctionA;
+    private String movementFunctionB;
+    private String movementFunctionC;
+}
