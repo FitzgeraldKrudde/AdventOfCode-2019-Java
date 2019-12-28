@@ -152,6 +152,15 @@ enum Direction {
         }
         throw new IllegalStateException("unknown state: current direction: " + direction + " intended direction: " + direction);
     }
+
+    public Direction oppositeDirection() {
+        return switch (this){
+            case U -> D;
+            case D -> U;
+            case L -> R;
+            case R -> L;
+        };
+    }
 }
 
 class Wire {
@@ -218,7 +227,7 @@ class Point implements Comparable<Point> {
     protected int x;
     protected int y;
 
-    Point(){
+    Point() {
     }
 
     @Override
@@ -231,7 +240,7 @@ class Point implements Comparable<Point> {
     }
 
     Point nextPoint(Direction direction) {
-        return nextPoint(direction,1);
+        return nextPoint(direction, 1);
     }
 
     Point nextPoint(Direction direction, int distance) {
@@ -254,5 +263,12 @@ class Point implements Comparable<Point> {
 
     Point nextPoint(Point delta) {
         return new Point(x + delta.getX(), y + delta.getY());
+    }
+
+    public int manhattanDistance(Point other) {
+        int distanceX = Integer.max(x, other.getX()) - Integer.min(x, other.getX());
+        int distanceY = Integer.max(y, other.getY()) - Integer.min(y, other.getY());
+
+        return distanceX + distanceY;
     }
 }
