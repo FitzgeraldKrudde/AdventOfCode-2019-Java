@@ -1,9 +1,6 @@
 package nl.krudde;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
+import lombok.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,7 +12,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
-import static nl.krudde.DonutMazeFieldType.*;
+import static nl.krudde.DonutMazeFieldType.OPEN;
+import static nl.krudde.DonutMazeFieldType.WALL;
 
 @Data
 @Builder
@@ -34,7 +32,7 @@ public class Day_20 {
         System.out.println("\npart 1: ");
 
         DonutMaze donutMaze = new DonutMaze(input);
-        System.out.println("donutMaze.portals = " + donutMaze.getPortals());
+//        System.out.println("donutMaze.portals = " + donutMaze.getPortals());
 
         int nrStepsShortestPath = donutMaze.nrStepsShortestPath();
         System.out.println("nrStepsShortestPath = " + nrStepsShortestPath);
@@ -48,6 +46,8 @@ public class Day_20 {
         start = LocalTime.now();
         System.out.println("\npart 2: ");
 
+        int nrStepsShortestPathWithRecursion = donutMaze.nrStepsShortestPathWithRecursion();
+        System.out.println("nrStepsShortestPathWithRecursion = " + nrStepsShortestPathWithRecursion);
 
         finish = LocalTime.now();
         System.out.println("duration (ms): " + Duration.between(start, finish).toMillis());
@@ -151,7 +151,7 @@ class DonutMaze {
         mapLabels.values().stream()
                 .forEach(entry -> portals.put(entry.get(1), entry.get(0)));
 
-        print();
+//        print();
     }
 
     private void print() {
@@ -161,7 +161,7 @@ class DonutMaze {
                 .forEach(y -> {
                     IntStream.rangeClosed(minX(), maxX())
                             .forEach(x -> {
-//                                    System.out.print(area.get(p).getPrintCharacter());
+                                System.out.print(area.get(new Point(x, y)).getPrintCharacter());
                             });
                     System.out.println();
                 });
@@ -199,6 +199,87 @@ class DonutMaze {
         return calculateDistanceMap(src).get(dst);
     }
 
+    private int calculateShortestPathWithRecursion(Point src, Point dst) {
+        // use the Dijkstra algorithm
+
+        int highestRecursionLevelForWhichPointsHaveBeenAdded = 1;
+
+        // upgrade area to points with recursionlevel
+        Map<Point, DonutMazeFieldType> areaWithRecursion = new HashMap<>();
+        area.entrySet().stream()
+                .filter(entry -> isOpen(entry.getKey()))
+                .forEach(entry -> areaWithRecursion.put(new PointWithRecursion(entry.getKey().getX(), entry.getKey().getY(), 0), entry.getValue()));
+
+        // create a set with unvisited squares
+        Set<PointWithRecursion> unvisitedPoints = area.keySet().stream()
+                .filter(point -> !isWall(point))
+                .map(point -> new PointWithRecursion(point.getX(), point.getY(), 0))
+                .collect(Collectors.toSet());
+
+        // add an extra recursion level upfront
+        List<PointWithRecursion> nextRecursionLevel = area.keySet().stream()
+                .filter(point -> !isWall(point))
+                .map(point -> new PointWithRecursion(point.getX(), point.getY(), 1))
+                .collect(Collectors.toList());
+        unvisitedPoints.addAll(nextRecursionLevel);
+
+        // Map with points and (minimum) distance, initially unreachable
+        Map<PointWithRecursion, Integer> mapPointWithDistance = unvisitedPoints.stream()
+                .collect(toMap(point -> point, point -> UNREACHABLE));
+        PointWithRecursion srcRecursion = new PointWithRecursion(src.getX(), src.getY(), 0);
+        // set the distance for the source to 0
+        mapPointWithDistance.put(srcRecursion, 0);
+        PointWithRecursion dstRecursion = new PointWithRecursion(dst.getX(), dst.getY(), 0);
+
+        // start with source
+        PointWithRecursion currentPoint = srcRecursion;
+
+        boolean reachedDestination = false;
+
+        while (!reachedDestination && !unvisitedPoints.isEmpty()) {
+            List<PointWithRecursion> freeNeighbours = getOpenNeighbourPointsWithWarpsAndRecursion(currentPoint).stream()
+                    .filter(point -> unvisitedPoints.contains(point))
+                    .collect(toList());
+
+            // update the distance to these neighbours if closer through this node
+            int currentDistanceToNeighbour = mapPointWithDistance.get(currentPoint) + 1;
+            freeNeighbours.stream()
+                    .filter(fn -> currentDistanceToNeighbour < mapPointWithDistance.get(fn))
+                    .forEach(fn -> mapPointWithDistance.put(fn, currentDistanceToNeighbour));
+
+            if (currentPoint.equals(dstRecursion)) {
+                reachedDestination = true;
+            } else {
+                // remove current point from unvisited set
+                unvisitedPoints.remove(currentPoint);
+
+                // set next best point, sort on recursionlevel instead of distance to prevent "wandering off" through the recursion levels
+                currentPoint = unvisitedPoints.stream()
+                        .filter(point -> mapPointWithDistance.get(point) != UNREACHABLE)
+                        .min(Comparator.comparingInt(PointWithRecursion::getRecursionLevel))
+                        .orElse(null);
+
+                // check if we need to add an extra recursion level
+                if (currentPoint != null && currentPoint.getRecursionLevel() == highestRecursionLevelForWhichPointsHaveBeenAdded) {
+                    final int newRecursionLevel = highestRecursionLevelForWhichPointsHaveBeenAdded + 1;
+                    Set<PointWithRecursion> recursiveLevel = area.keySet().stream()
+                            .filter(point -> isOpen(point))
+                            .filter(point -> !entrance.equals(point))
+                            .filter(point -> !exit.equals(point))
+                            .map(point -> new PointWithRecursion(point.getX(), point.getY(), newRecursionLevel))
+                            .collect(Collectors.toSet());
+                    unvisitedPoints.addAll(recursiveLevel);
+                    mapPointWithDistance.putAll(recursiveLevel.stream()
+                            .collect(toMap(point -> point, point -> UNREACHABLE)));
+                    highestRecursionLevelForWhichPointsHaveBeenAdded = newRecursionLevel;
+                    System.out.println("added new recursionlevel for level = " + newRecursionLevel + " @point = " + currentPoint + " #distancemap = " + mapPointWithDistance.size() + " #unvisitedPoints = " + unvisitedPoints.size());
+                }
+            }
+        }
+
+        return mapPointWithDistance.get(dstRecursion);
+    }
+
     private Map<Point, Integer> calculateDistanceMap(Point src) {
         // use the Dijkstra algorithm
 
@@ -218,7 +299,7 @@ class DonutMaze {
 
         while (!unvisitedPoints.isEmpty()) {
             List<Point> freeNeighbours = getOpenNeighbourPointsWithWarps(currentPoint).stream()
-                    .filter(point -> unvisitedPoints.contains(point))
+                    .filter(unvisitedPoints::contains)
                     .collect(toList());
 
             // update the distance to these neighbours if closer through this node
@@ -238,7 +319,6 @@ class DonutMaze {
                     .orElse(null);
         }
 
-//        System.out.println("src+dst+distance = " + src + "+" + dst + "=" + mapPointWithDistance.get(src));
         return mapPointWithDistance;
     }
 
@@ -264,6 +344,46 @@ class DonutMaze {
         return points;
     }
 
+    private List<PointWithRecursion> getOpenNeighbourPointsWithWarpsAndRecursion(PointWithRecursion point) {
+        List<PointWithRecursion> points = Arrays.stream(Move.values())
+                .map(point::nextPoint)
+                .filter(p -> isOpen(p))
+                .collect(Collectors.toList());
+
+        // add inner portal destination i.e. the outer portal point
+        if (isInnerPortal(point)) {
+            PointWithRecursion portalPoint = new PointWithRecursion(portals.get(point.toPlainPoint()), point.getRecursionLevel() + 1);
+            points.add(portalPoint);
+        }
+        if (point.getRecursionLevel() > 0) {
+            // add outer portal destination i.e. the inner portal point
+            if (isOuterPortal(point)) {
+                PointWithRecursion portalPoint = new PointWithRecursion(portals.get(point.toPlainPoint()), point.getRecursionLevel() - 1);
+                points.add(portalPoint);
+            }
+        }
+
+        return points;
+    }
+
+    private boolean isInnerPortal(PointWithRecursion point) {
+        return isInnerPortal(point.toPlainPoint());
+    }
+
+    private boolean isInnerPortal(Point point) {
+        return portals.containsKey(point) && (point.getX() > 0 && point.getX() < maxX() &&
+                point.getY() > 0 && point.getY() < maxY());
+    }
+
+    private boolean isOuterPortal(PointWithRecursion point) {
+        return portals.containsKey(point.toPlainPoint()) && (point.getX() == 0 || point.getX() == maxX() ||
+                point.getY() == 0 || point.getY() == maxY());
+    }
+
+    private boolean isOpen(PointWithRecursion point) {
+        return isOpen(point.toPlainPoint());
+    }
+
     private boolean isOpen(Point point) {
         return area.containsKey(point) && area.get(point).equals(OPEN);
     }
@@ -272,12 +392,12 @@ class DonutMaze {
         return area.containsKey(point) && area.get(point).equals(WALL);
     }
 
-    private boolean isEmptySpace(Point point) {
-        return area.containsKey(point) && area.get(point).equals(EMPTY_SPACE);
-    }
-
     public int nrStepsShortestPath() {
         return calculateShortestPath(entrance, exit);
+    }
+
+    public int nrStepsShortestPathWithRecursion() {
+        return calculateShortestPathWithRecursion(entrance, exit);
     }
 }
 
@@ -299,3 +419,41 @@ enum DonutMazeFieldType {
     }
 }
 
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Data
+@ToString(callSuper = true)
+class PointWithRecursion extends Point implements Comparable<Point> {
+    protected int recursionLevel = 0;
+
+    public PointWithRecursion(int x, int y, int recursionLevel) {
+        this.x = x;
+        this.y = y;
+        this.recursionLevel = recursionLevel;
+    }
+
+    public PointWithRecursion(Point point, int recursionLevel) {
+        this(point.getX(), point.getY(), recursionLevel);
+    }
+
+    PointWithRecursion nextPoint(Move move) {
+        return switch (move) {
+            case N -> new PointWithRecursion(getX(), getY() - 1, recursionLevel);
+            case S -> new PointWithRecursion(getX(), getY() + 1, recursionLevel);
+            case W -> new PointWithRecursion(getX() - 1, getY(), recursionLevel);
+            case E -> new PointWithRecursion(getX() + 1, getY(), recursionLevel);
+        };
+    }
+
+    public int compareTo(PointWithRecursion o) {
+        if (this.recursionLevel == o.recursionLevel) {
+            return super.compareTo(o);
+        } else {
+            return this.recursionLevel - o.recursionLevel;
+        }
+    }
+
+    public Point toPlainPoint() {
+        return new Point(x, y);
+    }
+}
